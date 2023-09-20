@@ -118,7 +118,7 @@ def _create_chain(text_pipeline: HuggingFacePipeline, prompt: PromptTemplate, ve
     )
 
 
-def get_conversation(user_question):
+def get_pipeline():
     tokenizer = get_tokenizer()
     model = get_model()
     generation_config = get_generation_config()
@@ -139,12 +139,7 @@ def get_conversation(user_question):
         batch_size=1
     )
 
-    llm = HuggingFacePipeline(pipeline=pipe)
-
-    chatbot = Chatbot(text_pipeline=llm, embeddings=get_embedding(), verbose=False)
-    answer = chatbot(user_question)
-
-    return answer
+    return pipe
 
 
 def handle_userinput(user_question):
@@ -173,8 +168,12 @@ def main():
     st.header("Bongo Bot :male-office-worker:")
 
     user_question = st.text_input("How can I help you today?")
+
     if user_question:
-        get_conversation(user_question)
+        llm = HuggingFacePipeline(pipeline=get_pipeline())
+
+        chatbot = Chatbot(text_pipeline=llm, embeddings=get_embedding(), verbose=False)
+        st.write(chatbot(user_question))
 
 
 if __name__ == '__main__':
