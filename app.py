@@ -69,7 +69,8 @@ def get_model():
         trust_remote_code=True,
         device=DEVICE,
         use_triton=use_triton,
-        uantize_config=None
+        uantize_config=None,
+        max_memory={0: "15360MiB", 1: "15360MiB", 2: "15360MiB", 3: "15360MiB"},
     )
 
     return model
