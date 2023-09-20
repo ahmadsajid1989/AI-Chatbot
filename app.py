@@ -1,4 +1,5 @@
 import os
+import re
 from abc import ABC
 
 import streamlit as st
@@ -177,13 +178,23 @@ def get_pipeline():
 # if __name__ == '__main__':
 #     main()
 
+def format_text(text):
+    # Replace known patterns with spaces
+    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
+
+    # Add spaces before capital letters followed by lowercase letters
+    text = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', text)
+
+    return text
+
+
 class StreamHandler(BaseCallbackHandler, ABC):
     def __init__(self, container, initial_text=""):
         self.container = container
         self.text = initial_text
 
     def on_llm_new_token(self, token: str, **kwargs) -> None:
-        self.text += token
+        self.text += format_text(token)
         self.container.markdown(self.text)
 
 
