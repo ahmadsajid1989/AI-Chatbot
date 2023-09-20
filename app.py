@@ -178,25 +178,6 @@ def get_pipeline():
 # if __name__ == '__main__':
 #     main()
 
-class StreamHandler(BaseCallbackHandler, ABC):
-    def __init__(self, container, initial_text=""):
-        self.container = container
-        self.text = initial_text
-
-    def on_llm_new_token(self, token: str, **kwargs) -> None:
-        self.text += token
-        self.container.markdown(self.text)
-
-    def on_response_complete(self):
-        formatted_text = format_text(self.text)
-        self.container.markdown(formatted_text)
-
-
-def format_text(token):
-    # Add spaces before capital letters followed by lowercase letters
-    return re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', token)
-
-
 
 def main():
     st.set_page_config(page_title="Bongo Bot", page_icon=":male-office-worker:")
@@ -222,8 +203,7 @@ def main():
         st.chat_message("user").write(prompt)
 
         with st.chat_message("assistant"):
-            stream_handler = StreamHandler(st.empty())
-            response = st.session_state.chatbot(prompt, callback=stream_handler)
+            response = st.session_state.chatbot(prompt,)
             st.session_state.messages.append(ChatMessage(role="assistant", content=response))
 
 
