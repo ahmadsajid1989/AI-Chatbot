@@ -184,8 +184,12 @@ class StreamHandler(BaseCallbackHandler, ABC):
         self.text = initial_text
 
     def on_llm_new_token(self, token: str, **kwargs) -> None:
-        self.text += format_text(token)
+        self.text += token
         self.container.markdown(self.text)
+
+    def on_response_complete(self):
+        formatted_text = format_text(self.text)
+        self.container.markdown(formatted_text)
 
 
 def format_text(token):
