@@ -5,3 +5,4 @@ auto-gptq>=0.4.2
 unstructured>=0.10.16
 transformers>=4.33.2
 qdrant-client>=1.5.4
+sentence-transformers>=2.2.2
