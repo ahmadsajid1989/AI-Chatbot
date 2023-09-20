@@ -1,0 +1,7 @@
+langchain>=0.0.295
+streamlit>=1.26.0
+python-dotenv>=1.0.0
+auto-gptq>=0.4.2
+unstructured>=0.10.16
+transformers>=4.33.2
+qdrant-client>=1.5.4
