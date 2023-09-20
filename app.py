@@ -180,9 +180,10 @@ def main():
 
     st.header("Bongo Bot :male-office-worker:")
 
-    user_question = st.text_input("How can I help you today?")
+    col1, col2 = st.columns([1, 2])
+    user_question = col1.text_area("How can I help you today?")
 
-    if user_question:
+    if col1.button("Send"):
         # Add user question to chat history
         st.session_state.chat_history.append({'sender': 'user', 'message': user_question})
 
@@ -195,9 +196,9 @@ def main():
         # Display chat history
         for msg in st.session_state.chat_history:
             if msg['sender'] == 'user':
-                st.write(f"You: {msg['message']}")
+                col2.write(f"You: {msg['message']}")
             else:
-                st.write(f"Bongo Bot: {msg['message']}")
+                col2.write(f"Bongo Bot: {msg['message']}")
 
 
 if __name__ == '__main__':
