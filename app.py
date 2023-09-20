@@ -162,7 +162,7 @@ def handle_userinput(user_question):
 
 def main():
     st.set_page_config(page_title="Bongo Bot",
-                       page_icon=":books:")
+                       page_icon=":male-detective:")
     st.write(css, unsafe_allow_html=True)
 
     if "conversation" not in st.session_state:
@@ -170,11 +170,11 @@ def main():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
 
-    st.header("Bongo Bot :books:")
+    st.header("Bongo Bot :male-detectives:")
 
-    user_question = st.text_input("Ask a question from the PDF:")
+    user_question = st.text_input("How can I help you today?")
     if user_question:
-        handle_userinput(user_question)
+        get_conversation(user_question)
 
 
 if __name__ == '__main__':
