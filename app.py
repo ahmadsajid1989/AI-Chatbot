@@ -2,11 +2,13 @@ import os
 import streamlit as st
 from auto_gptq import AutoGPTQForCausalLM
 from dotenv import load_dotenv
+from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chains.question_answering import load_qa_chain
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.llms import HuggingFacePipeline
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
+from langchain.schema import HumanMessage
 from langchain.vectorstores import Qdrant
 from qdrant_client import models, QdrantClient
 from transformers import AutoTokenizer, GenerationConfig, TextStreamer, pipeline
@@ -43,7 +45,8 @@ You are a customer support agent for Bongo, an OTT platform. Based on the chat h
 
 
 class Chatbot:
-    def __init__(self, text_pipeline: HuggingFacePipeline, embeddings: HuggingFaceEmbeddings,
+    def __init__(self, text_pipeline: HuggingFacePipeline,
+                 embeddings: HuggingFaceEmbeddings,
                  prompt_template: str = DEFAULT_TEMPLATE,
                  verbose: bool = False):
         prompt = PromptTemplate(
@@ -56,9 +59,9 @@ class Chatbot:
             client=client, collection_name=os.getenv("QDRANT_COLLECTION_NAME"),
             embeddings=embeddings)
 
-    def __call__(self, user_input: str) -> str:
+    def __call__(self, user_input: str, stream_handler: BaseCallbackHandler, ) -> str:
         docs = self.db.similarity_search(user_input)
-        return self.chain.run({'input_documents': docs, "question": user_input})
+        return self.chain.run({'input_documents': docs, "question": user_input}, callbacks=[stream_handler])
 
 
 def get_model():
@@ -156,6 +159,21 @@ def handle_userinput(user_question):
                 "{{MSG}}", message.content), unsafe_allow_html=True)
 
 
+class StreamHandler(BaseCallbackHandler):
+    def __init__(self, container, initial_text="", display_method='markdown'):
+        self.container = container
+        self.text = initial_text
+        self.display_method = display_method
+
+    def on_llm_new_token(self, token: str, **kwargs) -> None:
+        self.text += token + "/"
+        display_function = getattr(self.container, self.display_method, None)
+        if display_function is not None:
+            display_function(self.text)
+        else:
+            raise ValueError(f"Invalid display_method: {self.display_method}")
+
+
 def main():
     st.set_page_config(page_title="Bongo Bot",
                        page_icon=":male-office-worker:")
@@ -167,14 +185,27 @@ def main():
         st.session_state.chat_history = None
 
     st.header("Bongo Bot :male-office-worker:")
+    llm = HuggingFacePipeline(pipeline=get_pipeline())
 
-    user_question = st.text_input("How can I help you today?")
+    # user_question = st.text_input("How can I help you today?")
+    #
+    # if user_question:
+    #     llm = HuggingFacePipeline(pipeline=get_pipeline())
+    #
+    #     chatbot = Chatbot(text_pipeline=llm, embeddings=get_embedding(), verbose=False)
+    #     st.st(chatbot(user_question))
 
-    if user_question:
-        llm = HuggingFacePipeline(pipeline=get_pipeline())
+    query = st.text_input("input your query", value="How to resolve buffering issue?")
+    ask_button = st.button("ask")
+    st.markdown("### streaming box")
+    chat_box = st.empty()
+    stream_handler = StreamHandler(chat_box, display_method='write')
+    chatbot = Chatbot(text_pipeline=llm, embeddings=get_embedding(), verbose=False)
 
-        chatbot = Chatbot(text_pipeline=llm, embeddings=get_embedding(), verbose=False)
-        st.write(chatbot(user_question))
+    if query and ask_button:
+        response = chatbot(query, stream_handler)
+        llm_response = response
+        st.markdown(llm_response)
 
 
 if __name__ == '__main__':
