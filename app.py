@@ -2,6 +2,7 @@ import os
 import streamlit as st
 from auto_gptq import AutoGPTQForCausalLM
 from dotenv import load_dotenv
+from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chains.question_answering import load_qa_chain
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.llms import HuggingFacePipeline
@@ -56,9 +57,15 @@ class Chatbot:
             client=client, collection_name=os.getenv("QDRANT_COLLECTION_NAME"),
             embeddings=embeddings)
 
-    def __call__(self, user_input: str) -> str:
+    def __call__(self, user_input: str, callback=None) -> str:
         docs = self.db.similarity_search(user_input)
-        return self.chain.run({'input_documents': docs, "question": user_input})
+        response = self.chain.run({'input_documents': docs, "question": user_input})
+
+        if callback:
+            for token in response.split():
+                callback.on_llm_new_token(token)
+
+        return response
 
 
 def get_model():
@@ -167,6 +174,21 @@ def get_pipeline():
 # if __name__ == '__main__':
 #     main()
 
+class StreamHandler(BaseCallbackHandler):
+    def __init__(self, container, initial_text="", display_method='markdown'):
+        self.container = container
+        self.text = initial_text
+        self.display_method = display_method
+
+    def on_llm_new_token(self, token: str, **kwargs) -> None:
+        self.text += token + "/"
+        display_function = getattr(self.container, self.display_method, None)
+        if display_function is not None:
+            display_function(self.text)
+        else:
+            raise ValueError(f"Invalid display_method: {self.display_method}")
+
+
 def main():
     st.set_page_config(page_title="Bongo Bot", page_icon=":male-office-worker:")
     st.write(css, unsafe_allow_html=True)
@@ -180,25 +202,25 @@ def main():
 
     st.header("Bongo Bot :male-office-worker:")
 
-    col1, col2 = st.columns([1, 2])
-    user_question = col1.text_area("How can I help you today?")
+    query = st.text_input("Input your query", value="Tell me a joke")
+    ask_button = st.button("Ask")
 
-    if col1.button("Send"):
-        # Add user question to chat history
-        st.session_state.chat_history.append({'sender': 'user', 'message': user_question})
+    st.markdown("### Streaming Box")
+    chat_box = st.empty()
+    stream_handler = StreamHandler(chat_box)
 
-        # Get bot response
-        bot_response = st.session_state.chatbot(user_question)
+    st.markdown("### Together Box")
 
-        # Add bot response to chat history
-        st.session_state.chat_history.append({'sender': 'bot', 'message': bot_response})
+    if query and ask_button:
+        response = st.session_state.chatbot(query, callback=stream_handler)
+        llm_response = response.content
+        st.session_state.chat_history.append({'sender': 'bot', 'message': llm_response})
 
-        # Display chat history
         for msg in st.session_state.chat_history:
             if msg['sender'] == 'user':
-                col2.write(f"You: {msg['message']}")
+                st.write(f"You: {msg['message']}")
             else:
-                col2.write(f"Bongo Bot: {msg['message']}")
+                st.write(f"Bongo Bot: {msg['message']}")
 
 
 if __name__ == '__main__':
