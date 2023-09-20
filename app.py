@@ -1,4 +1,6 @@
 import os
+from abc import ABC
+
 import streamlit as st
 from auto_gptq import AutoGPTQForCausalLM
 from dotenv import load_dotenv
@@ -8,6 +10,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.llms import HuggingFacePipeline
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
+from langchain.schema import ChatMessage
 from langchain.vectorstores import Qdrant
 from qdrant_client import models, QdrantClient
 from transformers import AutoTokenizer, GenerationConfig, TextStreamer, pipeline
@@ -174,19 +177,14 @@ def get_pipeline():
 # if __name__ == '__main__':
 #     main()
 
-class StreamHandler(BaseCallbackHandler):
-    def __init__(self, container, initial_text="", display_method='markdown'):
+class StreamHandler(BaseCallbackHandler, ABC):
+    def __init__(self, container, initial_text=""):
         self.container = container
         self.text = initial_text
-        self.display_method = display_method
 
     def on_llm_new_token(self, token: str, **kwargs) -> None:
-        self.text += token + "/"
-        display_function = getattr(self.container, self.display_method, None)
-        if display_function is not None:
-            display_function(self.text)
-        else:
-            raise ValueError(f"Invalid display_method: {self.display_method}")
+        self.text += token
+        self.container.markdown(self.text)
 
 
 def main():
@@ -202,25 +200,20 @@ def main():
 
     st.header("Bongo Bot :male-office-worker:")
 
-    query = st.text_input("Input your query", value="Tell me a joke")
-    
+    if "messages" not in st.session_state:
+        st.session_state["messages"] = [ChatMessage(role="assistant", content="How can I help you?")]
 
-    st.markdown("### Streaming Box")
-    chat_box = st.empty()
-    stream_handler = StreamHandler(chat_box)
+    for msg in st.session_state.messages:
+        st.chat_message(msg.role).write(msg.content)
 
-    st.markdown("### Together Box")
+    if prompt := st.chat_input():
+        st.session_state.messages.append(ChatMessage(role="user", content=prompt))
+        st.chat_message("user").write(prompt)
 
-    if query:
-        response = st.session_state.chatbot(query, callback=stream_handler)
-        llm_response = response
-        st.session_state.chat_history.append({'sender': 'bot', 'message': llm_response})
-
-        for msg in st.session_state.chat_history:
-            if msg['sender'] == 'user':
-                st.write(f"You: {msg['message']}")
-            else:
-                st.write(f"Bongo Bot: {msg['message']}")
+        with st.chat_message("assistant"):
+            stream_handler = StreamHandler(st.empty())
+            response = st.session_state.chatbot(prompt, callback=stream_handler)
+            st.session_state.messages.append(ChatMessage(role="assistant", content=response))
 
 
 if __name__ == '__main__':
