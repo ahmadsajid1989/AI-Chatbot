@@ -1,5 +1,6 @@
 import os
 import re
+import warnings
 from abc import ABC
 
 import streamlit as st
@@ -63,13 +64,7 @@ class Chatbot:
 
     def __call__(self, user_input: str, callback=None) -> str:
         docs = self.db.similarity_search(user_input)
-        response = self.chain.run({'input_documents': docs, "question": user_input})
-
-        if callback:
-            for token in response.split():
-                callback.on_llm_new_token(token)
-
-        return response
+        return self.chain.run({'input_documents': docs, "question": user_input})
 
 
 def get_model():
@@ -180,6 +175,7 @@ def get_pipeline():
 
 
 def main():
+    warnings.filterwarnings('ignore', category=UserWarning)
     st.set_page_config(page_title="Bongo Bot", page_icon=":male-office-worker:")
     st.write(css, unsafe_allow_html=True)
 
@@ -203,7 +199,7 @@ def main():
         st.chat_message("user").write(prompt)
 
         with st.chat_message("assistant"):
-            response = st.session_state.chatbot(prompt,)
+            response = st.session_state.chatbot(prompt)
             st.session_state.messages.append(ChatMessage(role="assistant", content=response))
 
 
