@@ -201,6 +201,7 @@ def main():
         with st.chat_message("assistant"):
             response = st.session_state.chatbot(prompt)
             st.session_state.messages.append(ChatMessage(role="assistant", content=response))
+            st.experimental_rerun()
 
 
 if __name__ == '__main__':
