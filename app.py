@@ -203,7 +203,7 @@ def main():
     st.header("Bongo Bot :male-office-worker:")
 
     query = st.text_input("Input your query", value="Tell me a joke")
-    ask_button = st.button("Ask")
+    
 
     st.markdown("### Streaming Box")
     chat_box = st.empty()
@@ -211,9 +211,9 @@ def main():
 
     st.markdown("### Together Box")
 
-    if query and ask_button:
+    if query:
         response = st.session_state.chatbot(query, callback=stream_handler)
-        llm_response = response.content
+        llm_response = response
         st.session_state.chat_history.append({'sender': 'bot', 'message': llm_response})
 
         for msg in st.session_state.chat_history:
